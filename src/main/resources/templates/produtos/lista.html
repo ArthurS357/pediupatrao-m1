@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+    <head>
+        <title>Gerenciar Produtos</title>
+    </head>
+    <body>
+        <div th:fragment="content" class="container mt-5">
+            <h1 class="mb-4">Gestão de Produtos</h1>
+
+            <!-- Botão para abrir o formulário -->
+            <button class="btn btn-primary mb-3" data-bs-toggle="collapse" data-bs-target="#formularioProduto"
+                    sec:authorize="hasAnyRole('GERENTE','ADMIN')">
+                Novo Produto
+            </button>
+
+            <!-- Formulário de Cadastro -->
+            <div class="collapse" id="formularioProduto" sec:authorize="hasAnyRole('GERENTE','ADMIN')">
+                <div class="card card-body">
+                    <form th:action="@{/api/produtos}" method="post" id="produtoForm">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Produto</label>
+                            <input type="text" id="nome" name="nome" class="form-control" placeholder="Nome do Produto" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tipo" class="form-label">Tipo do Produto</label>
+                            <select id="tipo" name="tipo" class="form-select" required>
+                                <option value="" disabled selected>Selecione o Tipo</option>
+                                <option value="Pizza">Pizza</option>
+                                <option value="Lanche">Lanche</option>
+                                <option value="Bebida">Bebida</option>
+                                <option value="Porção">Porção</option>
+                                <option value="Adicional">Adicional</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="preco" class="form-label">Preço</label>
+                            <input type="number" id="preco" name="preco" class="form-control" placeholder="Preço (R$)" step="0.01" required>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" id="ativo" name="ativo" class="form-check-input">
+                            <label for="ativo" class="form-check-label">Produto Ativo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Listagem de Produtos -->
+            <table class="table table-bordered table-striped mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>Preço</th>
+                        <th>Ativo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop para listar os produtos -->
+                    <tr th:each="produto : ${produtos}">
+                        <td th:text="${produto.id}"></td>
+                        <td th:text="${produto.nome}"></td>
+                        <td th:text="${produto.tipo}"></td>
+                        <td th:text="${#numbers.formatDecimal(produto.preco, 1, 'COMMA', 2, 'POINT')}"></td>
+                        <td th:text="${produto.ativo ? 'Sim' : 'Não'}">Sim</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <script sec:authorize="hasAnyRole('GERENTE','ADMIN')">
+                // /api/produtos so aceita JSON; o fetch ganha o CSRF de script.js
+                document.getElementById('produtoForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const f = e.target;
+                    const resposta = await fetch('/api/produtos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            nome: f.nome.value,
+                            tipo: f.tipo.value,
+                            preco: parseFloat(f.preco.value),
+                            ativo: f.ativo.checked
+                        })
+                    });
+                    if (resposta.ok) {
+                        location.reload();
+                        return;
+                    }
+                    const problema = await resposta.json().catch(() => ({}));
+                    alert(problema.detail || ('Erro ' + resposta.status));
+                });
+            </script>
+        </div>
+    </body>
+</html>

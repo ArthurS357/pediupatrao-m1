@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Novo Pedido</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a th:href="@{/pedidos}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <h2 class="fw-bold mb-0">Novo Pedido</h2>
+    </div>
+
+    <div class="card shadow-sm" style="max-width: 720px;">
+        <div class="card-body p-4">
+            <div class="alert alert-danger d-none" id="erroPedido" role="alert"></div>
+
+            <form id="formPedido">
+                <div class="mb-3">
+                    <label for="clienteId" class="form-label fw-medium">Cliente</label>
+                    <select id="clienteId" class="form-select" required>
+                        <option value="" disabled selected>Selecione o cliente</option>
+                        <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.nome}"></option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="tipoEntrega" class="form-label fw-medium">Tipo</label>
+                    <select id="tipoEntrega" class="form-select" required>
+                        <option value="ENTREGA">Entrega</option>
+                        <option value="RETIRADA">Retirada</option>
+                    </select>
+                </div>
+
+                <label class="form-label fw-medium">Itens</label>
+                <div id="itens"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mb-4" id="addItem">
+                    <i class="bi bi-plus-lg"></i> Adicionar item
+                </button>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Registrar pedido</button>
+                    <a th:href="@{/pedidos}" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+                <div class="form-text mt-2">O valor total é calculado pelo servidor a partir dos preços cadastrados.</div>
+            </form>
+        </div>
+    </div>
+
+    <template id="modeloItem">
+        <div class="input-group mb-2 item">
+            <select class="form-select produto" required>
+                <option value="" disabled selected>Produto</option>
+                <th:block th:each="p : ${produtos}">
+                    <option th:if="${p.ativo}" th:value="${p.id}"
+                            th:text="${p.nome} + ' — R$ ' + ${#numbers.formatDecimal(p.preco, 1, 'POINT', 2, 'COMMA')}"></option>
+                </th:block>
+            </select>
+            <input type="number" class="form-control quantidade" min="1" max="100" value="1" style="max-width: 100px;" required>
+            <button type="button" class="btn btn-outline-danger remover"><i class="bi bi-x-lg"></i></button>
+        </div>
+    </template>
+
+    <script>
+        const itens = document.getElementById('itens');
+        const modelo = document.getElementById('modeloItem');
+        const erroPedido = document.getElementById('erroPedido');
+
+        function adicionarItem() {
+            itens.appendChild(modelo.content.cloneNode(true));
+        }
+        document.getElementById('addItem').addEventListener('click', adicionarItem);
+        itens.addEventListener('click', (e) => {
+            const remover = e.target.closest('.remover');
+            if (remover && itens.children.length > 1) remover.closest('.item').remove();
+        });
+        adicionarItem();
+
+        document.getElementById('formPedido').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const corpo = {
+                clienteId: document.getElementById('clienteId').value,
+                tipoEntrega: document.getElementById('tipoEntrega').value,
+                itens: [...itens.querySelectorAll('.item')].map(i => ({
+                    produtoId: i.querySelector('.produto').value,
+                    quantidade: parseInt(i.querySelector('.quantidade').value, 10)
+                }))
+            };
+            const resposta = await fetch('/api/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(corpo)
+            });
+            if (resposta.ok) {
+                location.href = '/pedidos';
+                return;
+            }
+            const problema = await resposta.json().catch(() => ({}));
+            const erros = (problema.errors || []).map(x => x.message).join('; ');
+            erroPedido.textContent = problema.detail || erros || ('Erro ' + resposta.status);
+            erroPedido.classList.remove('d-none');
+        });
+    </script>
+
+</div>
+
+</body>
+</html>
