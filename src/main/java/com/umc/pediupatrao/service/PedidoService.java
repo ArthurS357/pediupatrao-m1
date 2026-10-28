@@ -48,6 +48,7 @@ public class PedidoService {
         Pedido pedido = new Pedido();
         pedido.setClienteId(dados.clienteId());
         pedido.setTipoEntrega(dados.tipoEntrega());
+        pedido.setFormaPagamento(dados.formaPagamento());
         pedido.setItens(dados.itens().stream().map(this::montarItem).toList());
         pedido.setDescontoPercentual(BigDecimal.ZERO);
         pedido.setValorTotal(calcularTotal(pedido.getItens(), BigDecimal.ZERO));
@@ -60,6 +61,7 @@ public class PedidoService {
                 AuditoriaService.campos(), AuditoriaService.campos(
                         "clienteId", salvo.getClienteId(),
                         "tipoEntrega", salvo.getTipoEntrega(),
+                        "formaPagamento", salvo.getFormaPagamento(),
                         "itens", resumoDosItens(salvo.getItens()),
                         "valorTotal", salvo.getValorTotal(),
                         "status", salvo.getStatus()),

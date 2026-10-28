@@ -26,6 +26,7 @@ public class Pedido {
 
     private String clienteId;
     private TipoEntrega tipoEntrega;
+    private FormaPagamento formaPagamento;
     private List<ItemPedido> itens;
     private BigDecimal descontoPercentual = BigDecimal.ZERO;
     private BigDecimal valorTotal;

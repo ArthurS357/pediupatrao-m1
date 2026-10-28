@@ -29,3 +29,6 @@ atlas-credentials.env
 .env
 .env.*
 application-local.properties
+
+# Backups
+*.zip

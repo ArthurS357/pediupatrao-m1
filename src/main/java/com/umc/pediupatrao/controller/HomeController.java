@@ -10,6 +10,8 @@ import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.Produto;
 import com.umc.pediupatrao.entity.Usuario;
 import com.umc.pediupatrao.entity.EntidadeAuditada;
+import com.umc.pediupatrao.entity.FormaPagamento;
+import com.umc.pediupatrao.entity.StatusPedido;
 import com.umc.pediupatrao.service.Ator;
 import com.umc.pediupatrao.service.AuditoriaService;
 import com.umc.pediupatrao.service.ClienteService;
@@ -139,6 +141,17 @@ public class HomeController {
         model.addAttribute("clientes", clienteService.listarClientes());
         model.addAttribute("produtos", produtoService.listarProdutos());
         model.addAttribute("content", "pedidos/novo :: content");
+        return "layout";
+    }
+
+    // ========================
+    // DASHBOARD
+    // ========================
+    @GetMapping("/dashboard")
+    public String dashboard(Model model) {
+        model.addAttribute("statuses", StatusPedido.values());
+        model.addAttribute("formasPagamento", FormaPagamento.values());
+        model.addAttribute("content", "dashboard :: content");
         return "layout";
     }
 
