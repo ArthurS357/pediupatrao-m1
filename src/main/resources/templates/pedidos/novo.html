@@ -33,6 +33,16 @@
                     </select>
                 </div>
 
+                <div class="mb-3">
+                    <label for="formaPagamento" class="form-label fw-medium">Forma de pagamento</label>
+                    <select id="formaPagamento" class="form-select" required>
+                        <option value="PIX">PIX</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="CARTAO_CREDITO">Cartão de crédito</option>
+                        <option value="CARTAO_DEBITO">Cartão de débito</option>
+                    </select>
+                </div>
+
                 <label class="form-label fw-medium">Itens</label>
                 <div id="itens"></div>
                 <button type="button" class="btn btn-sm btn-outline-secondary mb-4" id="addItem">
@@ -82,6 +92,7 @@
             const corpo = {
                 clienteId: document.getElementById('clienteId').value,
                 tipoEntrega: document.getElementById('tipoEntrega').value,
+                formaPagamento: document.getElementById('formaPagamento').value,
                 itens: [...itens.querySelectorAll('.item')].map(i => ({
                     produtoId: i.querySelector('.produto').value,
                     quantidade: parseInt(i.querySelector('.quantidade').value, 10)

@@ -11,6 +11,8 @@ import com.umc.pediupatrao.controller.ClienteController;
 import com.umc.pediupatrao.controller.PedidoController;
 import com.umc.pediupatrao.controller.ProdutoController;
 import com.umc.pediupatrao.controller.UsuarioController;
+import com.umc.pediupatrao.dashboard.DashboardController;
+import com.umc.pediupatrao.dashboard.DashboardService;
 import com.umc.pediupatrao.service.AuditoriaService;
 import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
@@ -39,7 +41,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
  * mocks, so "allowed" means authorization let the request through (any status but 401/403).
  */
 @WebMvcTest(controllers = {PedidoController.class, UsuarioController.class, ClienteController.class,
-        AuditoriaController.class, ProdutoController.class})
+        AuditoriaController.class, ProdutoController.class, DashboardController.class})
 @Import(SecurityConfig.class)
 class SecurityRulesIntegrationTest {
 
@@ -57,6 +59,8 @@ class SecurityRulesIntegrationTest {
     private ClienteService clienteService;
     @MockitoBean
     private AuditoriaService auditoriaService;
+    @MockitoBean
+    private DashboardService dashboardService;
     @MockitoBean
     private ProdutoService produtoService;
     @MockitoBean
@@ -128,6 +132,7 @@ class SecurityRulesIntegrationTest {
                 Arguments.of("ADMIN", HttpMethod.POST, "/api/pedidos/o1/cancelamento", DENIED),
                 Arguments.of("ADMIN", HttpMethod.GET, "/api/clientes", DENIED),
                 Arguments.of("ADMIN", HttpMethod.POST, "/api/produtos", ALLOWED),
+                Arguments.of("ADMIN", HttpMethod.GET, "/api/dashboard/kpis", ALLOWED),
 
                 // GERENTE: runs orders, discount, cancel, reads customers and audit; no user admin
                 Arguments.of("GERENTE", HttpMethod.GET, "/api/usuarios", DENIED),
@@ -141,6 +146,7 @@ class SecurityRulesIntegrationTest {
                 Arguments.of("GERENTE", HttpMethod.POST, "/api/clientes", DENIED),
                 Arguments.of("GERENTE", HttpMethod.DELETE, "/api/clientes/c1", ALLOWED),
                 Arguments.of("GERENTE", HttpMethod.POST, "/api/produtos", ALLOWED),
+                Arguments.of("GERENTE", HttpMethod.GET, "/api/dashboard/top-products", ALLOWED),
 
                 // ATENDENTE: registers orders, manages customers; nothing privileged
                 Arguments.of("ATENDENTE", HttpMethod.GET, "/api/usuarios", DENIED),
@@ -156,6 +162,7 @@ class SecurityRulesIntegrationTest {
                 Arguments.of("ATENDENTE", HttpMethod.PUT, "/api/clientes/c1", ALLOWED),
                 Arguments.of("ATENDENTE", HttpMethod.DELETE, "/api/clientes/c1", DENIED),
                 Arguments.of("ATENDENTE", HttpMethod.GET, "/api/produtos", ALLOWED),
-                Arguments.of("ATENDENTE", HttpMethod.POST, "/api/produtos", DENIED));
+                Arguments.of("ATENDENTE", HttpMethod.POST, "/api/produtos", DENIED),
+                Arguments.of("ATENDENTE", HttpMethod.GET, "/api/dashboard/kpis", DENIED));
     }
 }

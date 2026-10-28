@@ -13,6 +13,7 @@ import com.umc.pediupatrao.dto.ItemRequest;
 import com.umc.pediupatrao.dto.PedidoRequest;
 import com.umc.pediupatrao.entity.Cliente;
 import com.umc.pediupatrao.entity.EntidadeAuditada;
+import com.umc.pediupatrao.entity.FormaPagamento;
 import com.umc.pediupatrao.entity.ItemPedido;
 import com.umc.pediupatrao.entity.Operacao;
 import com.umc.pediupatrao.entity.Pedido;
@@ -75,7 +76,7 @@ class PedidoServiceUnitTest {
         when(produtoRepository.findById("p2")).thenReturn(Optional.of(produto("p2", "Guarana", 8.00, true)));
         when(pedidoRepository.save(any(Pedido.class))).thenAnswer(returnsFirstArg());
         PedidoRequest request = new PedidoRequest("c1", TipoEntrega.ENTREGA,
-                List.of(new ItemRequest("p1", 2), new ItemRequest("p2", 1)));
+                List.of(new ItemRequest("p1", 2), new ItemRequest("p2", 1)), FormaPagamento.PIX);
 
         // when
         Pedido result = tested.criar(request, ATENDENTE);
@@ -86,6 +87,7 @@ class PedidoServiceUnitTest {
         assertThat(result.getCriadoPor()).isEqualTo("atendente01");
         assertThat(result.getDataHoraEntrada()).isEqualTo(NOW);
         assertThat(result.getDescontoPercentual()).isEqualByComparingTo("0");
+        assertThat(result.getFormaPagamento()).isEqualTo(FormaPagamento.PIX);
         verify(auditoria).registrar(eq(ATENDENTE), eq(Operacao.PEDIDO_CRIADO), eq(EntidadeAuditada.PEDIDO),
                 any(), any(), any(), eq(null));
     }
@@ -96,7 +98,7 @@ class PedidoServiceUnitTest {
         // given
         givenCliente("c1");
         when(produtoRepository.findById("p1")).thenReturn(Optional.of(produto("p1", "Calabresa", 45.50, false)));
-        PedidoRequest request = new PedidoRequest("c1", TipoEntrega.RETIRADA, List.of(new ItemRequest("p1", 1)));
+        PedidoRequest request = new PedidoRequest("c1", TipoEntrega.RETIRADA, List.of(new ItemRequest("p1", 1)), null);
 
         // when / then
         assertThatThrownBy(() -> tested.criar(request, ATENDENTE)).isInstanceOf(RegraDeNegocioException.class);
@@ -108,7 +110,7 @@ class PedidoServiceUnitTest {
     void criar_whenCustomerDoesNotExist_shouldThrowWithoutSaving() {
         // given
         when(clienteService.buscarPorId("x")).thenReturn(Optional.empty());
-        PedidoRequest request = new PedidoRequest("x", TipoEntrega.RETIRADA, List.of(new ItemRequest("p1", 1)));
+        PedidoRequest request = new PedidoRequest("x", TipoEntrega.RETIRADA, List.of(new ItemRequest("p1", 1)), null);
 
         // when / then
         assertThatThrownBy(() -> tested.criar(request, ATENDENTE)).isInstanceOf(RegraDeNegocioException.class);
