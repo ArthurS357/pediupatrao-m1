@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /** Respostas de erro da API REST como {@link ProblemDetail} (RFC 9457). */
@@ -65,7 +67,29 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
         List<Map<String, String>> erros = exception.getBindingResult().getFieldErrors().stream()
-                .map(e -> Map.of("field", e.getField(), "message", String.valueOf(e.getDefaultMessage())))
+                .map(e -> Map.of("field", e.getField(), "message", e.isBindingFailure()
+                        // falha de conversao (data, enum): a mensagem do Spring expoe tipos Java internos
+                        ? "%s has an invalid value: %s".formatted(e.getField(), e.getRejectedValue())
+                        : String.valueOf(e.getDefaultMessage())))
+                .toList();
+        problema.setProperty("errors", erros);
+        return ResponseEntity.badRequest().body(problema);
+    }
+
+    /** Restricao em parametro avulso (ex.: {@code @Max} em {@code limit}): mesmo formato, com {@code errors}. */
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException exception,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
+        // Um objeto validado (ex.: @Valid DashboardFilter) chega como ParameterErrors: o campo e o do objeto,
+        // nao o nome Java do parametro. Um parametro avulso (ex.: limit) usa o proprio nome.
+        List<Map<String, String>> erros = exception.getParameterValidationResults().stream()
+                .flatMap(resultado -> resultado instanceof ParameterErrors errosDoObjeto
+                        ? errosDoObjeto.getFieldErrors().stream().map(erro -> Map.of(
+                                "field", erro.getField(), "message", String.valueOf(erro.getDefaultMessage())))
+                        : resultado.getResolvableErrors().stream().map(erro -> Map.of(
+                                "field", String.valueOf(resultado.getMethodParameter().getParameterName()),
+                                "message", String.valueOf(erro.getDefaultMessage()))))
                 .toList();
         problema.setProperty("errors", erros);
         return ResponseEntity.badRequest().body(problema);

@@ -97,7 +97,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auditoria/**", "/auditoria/**").hasAnyRole(ADMIN, GERENTE)
 
                         // Dashboard administrativo: indicadores de venda, so leitura
-                        .requestMatchers("/api/dashboard/**", "/dashboard").hasAnyRole(ADMIN, GERENTE)
+                        .requestMatchers("/api/dashboard/**", "/dashboard", "/v3/api-docs/**", "/swagger-ui/**",
+                                "/swagger-ui.html").hasAnyRole(ADMIN, GERENTE)
 
                         // Pedidos: operacoes exclusivas do GERENTE (nem o ADMIN)
                         .requestMatchers("/api/pedidos/*/status", "/api/pedidos/*/desconto", "/api/pedidos/*/cancelamento")

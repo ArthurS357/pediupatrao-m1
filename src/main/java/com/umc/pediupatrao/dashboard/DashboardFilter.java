@@ -27,10 +27,12 @@ public record DashboardFilter(
                 example = "FINALIZADO", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         StatusPedido status,
 
-        @Schema(description = "Filter by product category, as registered in the product type",
+        @Schema(description = "Filter by product category (product type, case-insensitive, blank means all). "
+                + "Order indicators (kpis, sales-trend, orders-status) keep whole orders holding at least one item "
+                + "of the category; item indicators (sales-by-category, top-products) keep only its items",
                 example = "Pizza", maxLength = 50, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @Size(max = 50, message = "category must be at most {max} characters")
-        @Pattern(regexp = "^[\\p{L}\\p{N} _-]+$", message = "category must contain only letters, digits, spaces, _ or -")
+        @Pattern(regexp = "^\\P{Cntrl}*$", message = "category must not contain control characters")
         String category,
 
         @Schema(description = "Filter by payment method", example = "PIX",
