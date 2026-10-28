@@ -1,0 +1,32 @@
+# Corpos reais de erro da API do dashboard, capturados via MockMvc com o filtro de seguranca e o
+# RestExceptionHandler reais (a validacao acontece antes do service). Regenerado apos a revisao.
+
+GET /api/dashboard/top-products?limit=51
+HTTP 400 application/problem+json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Validation failed","instance":"/api/dashboard/top-products","errors":[{"field":"limit","message":"limit must be at most 50"}]}
+
+GET /api/dashboard/top-products?category=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+HTTP 400 application/problem+json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Validation failed","instance":"/api/dashboard/top-products","errors":[{"field":"category","message":"category must be at most 50 characters"}]}
+
+GET /api/dashboard/kpis?from=01/10/2026
+HTTP 400 application/problem+json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Validation failed","instance":"/api/dashboard/kpis","errors":[{"field":"from","message":"from has an invalid value: 01/10/2026"}]}
+
+GET /api/dashboard/orders-status?status=ENTREGUE
+HTTP 400 application/problem+json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Validation failed","instance":"/api/dashboard/orders-status","errors":[{"field":"status","message":"status has an invalid value: ENTREGUE"}]}
+
+GET /api/dashboard/sales-trend?granularity=YEAR
+HTTP 400 application/problem+json
+{"type":"about:blank","title":"Bad Request","status":400,"detail":"Failed to convert 'granularity' with value: 'YEAR'","instance":"/api/dashboard/sales-trend"}
+
+GET /api/dashboard/kpis?from=2026-10-31&to=2026-10-01
+HTTP 422 application/problem+json
+{"type":"about:blank","title":"Unprocessable Entity","status":422,"detail":"A data inicial (from) não pode ser posterior à data final (to).","instance":"/api/dashboard/kpis"}
+
+GET /api/dashboard/kpis como ATENDENTE
+HTTP 403
+
+GET /api/dashboard/kpis sem login
+HTTP 401

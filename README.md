@@ -32,7 +32,7 @@ Para entrar, use os logins `admin`, `gerente` ou `atendente`. A senha de cada um
 Os testes rodam sem MongoDB:
 
 ```powershell
-.\mvnw.cmd test      # 96 testes
+.\mvnw.cmd test      # 125 testes (+12 opcionais contra MongoDB, ver Dashboard)
 .\mvnw.cmd verify
 ```
 
@@ -104,12 +104,29 @@ No projeto base havia CRUD de usuários, clientes, produtos e pedidos, mas nada 
 - Do `Pedido` antigo saíram os campos `tipoPizza`, `sabor` e `quantidade`. **Pedidos já gravados no banco não são compatíveis**, porque o status era texto livre; ao migrar, esvazie a coleção `pedidos`.
 - Dependências adicionadas: `spring-boot-starter-validation` e `thymeleaf-extras-springsecurity6`, além de `spring-boot-starter-test` e `spring-security-test` no escopo de teste.
 
+## Dashboard administrativo
+
+ADMIN e GERENTE acompanham as vendas em `/dashboard` (item **Dashboard** do menu), uma tela que consome a API somente leitura `/api/dashboard/**`:
+
+| Endpoint | O que responde |
+|---|---|
+| `GET /api/dashboard/kpis` | faturamento, ticket médio, nº de pedidos e período |
+| `GET /api/dashboard/sales-trend?granularity=DAY\|WEEK\|MONTH` | série temporal de vendas |
+| `GET /api/dashboard/sales-by-category` | vendas por categoria de produto |
+| `GET /api/dashboard/orders-status` | pedidos por status |
+| `GET /api/dashboard/top-products?sort=QUANTITY\|REVENUE&limit=10` | ranking de produtos |
+
+Todos os endpoints aceitam os filtros `from`, `to` (`yyyy-MM-dd`), `status`, `category` e `paymentMethod`. A documentação interativa fica em `/swagger-ui.html` (é preciso estar logado). Requisitos, contrato da API, evidências de teste e roteiro do vídeo estão em [`docs/dashboard/`](docs/dashboard/README.md).
+
+O teste de integração contra um MongoDB real é opcional: `.\mvnw.cmd test "-Ddashboard.it=true"`, com `SPRING_DATA_MONGODB_URI` definida. Ele usa o banco `pizzaria_dashboard_it` e remove só os documentos que criou.
+
 ## Estrutura
 
 ```
 src/main/java/com/umc/pediupatrao/
 ├── config/       SecurityConfig, AppConfig (Clock e transações), DataInitializer
 ├── controller/   REST (/api/**) e HomeController (páginas Thymeleaf)
+├── dashboard/    API do dashboard: controller, service, repository (agregações) e DTOs
 ├── dto/          requests e responses (records)
 ├── entity/       documentos MongoDB e enums
 ├── exception/    exceções de negócio e handlers (REST e páginas)
