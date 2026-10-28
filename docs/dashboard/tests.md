@@ -7,9 +7,31 @@
 | Unitário | `DashboardServiceUnitTest` | 17 | ✅ 17/17 | Período padrão e limites (30, 366 e anos 2000–2100), venda sem `CANCELADO`, filtro por status, categoria sem diferenciar maiúsculas e categoria em branco, ticket médio em HALF_UP, série contínua com zeros, semana começando na segunda-feira, soma por categoria arredondada só no fim, status sempre completos, ranking com categoria |
 | Integração (HTTP) | `DashboardControllerIntegrationTest` | 13 | ✅ 13/13 | Binding dos 5 filtros, valores padrão de `granularity`, `sort` e `limit`, 400 com `errors[]` (data, enum, `limit`, `category`), 422 e 500 como `ProblemDetail` sem vazar a causa, 401 sem login, 403 para ATENDENTE, texto "parecido com operador Mongo" tratado como dado |
 | Integração (segurança) | `SecurityRulesIntegrationTest` (+3 linhas) | 40 | ✅ 40/40 | Matriz perfil × rota com o dashboard incluído: ADMIN e GERENTE passam, ATENDENTE recebe 403 |
-| Integração (MongoDB real) | `DashboardMongoIntegrationTest` | 13 | ⏸️ opt-in, não executado aqui | Os pipelines contra o banco: totais, PIX, categoria, CANCELADO, série dia/semana/mês, último dia às 23:30, categorias somando o faturamento, contagem por status, ranking, período vazio e o caso de arredondamento (2 × R$ 10,05 com 10% de desconto, que precisam dar R$ 18,10 em todos os endpoints) |
+| Integração (MongoDB real) | `DashboardMongoIntegrationTest` | 13 | ✅ 13/13 (Atlas) | Os pipelines contra o banco: totais, PIX, categoria, CANCELADO, série dia/semana/mês, último dia às 23:30, categorias somando o faturamento, contagem por status, ranking, período vazio e o caso de arredondamento (2 × R$ 10,05 com 10% de desconto, que precisam dar R$ 18,10 em todos os endpoints) |
 | Regressão | demais testes do projeto | 59 | ✅ 59/59 | Nada quebrou no Pediu Patrão. `PedidoServiceUnitTest` passou a verificar também a `formaPagamento` |
-| **Total** | `./mvnw verify` | **142** | **129 ✅ · 0 ❌ · 13 ⏸️** | Saída completa em [`tests/evidencias-mvn-verify.txt`](tests/evidencias-mvn-verify.txt) |
+| **Total** | `./mvnw test -Ddashboard.it=true` | **142** | **142 ✅ · 0 ❌ · 0 ⏸️** | Saída completa em [`evidencias/mvn-testes-mongodb-real.txt`](evidencias/mvn-testes-mongodb-real.txt) |
+
+**Validado contra o MongoDB real (Atlas):** em 2026-10-28, a suíte completa rodou com `-Ddashboard.it=true` e `SPRING_DATA_MONGODB_URI` apontando para o Atlas. Resultado: `Tests run: 142, Failures: 0, Errors: 0, Skipped: 0` e `BUILD SUCCESS`.
+
+## Evidências
+
+**Suíte completa:** [`evidencias/mvn-testes-mongodb-real.txt`](evidencias/mvn-testes-mongodb-real.txt) (142 testes, 0 falhas, 0 ignorados, incluindo os 13 de `DashboardMongoIntegrationTest`).
+
+**API real contra o Atlas** (sessão de gerente, período padrão de 30 dias, dados reais do banco):
+
+| Endpoint | Print |
+|---|---|
+| `GET /api/dashboard/kpis` | [`api-kpis.png`](evidencias/api-kpis.png) |
+| `GET /api/dashboard/sales-trend` | [`api-sales-trend.png`](evidencias/api-sales-trend.png) |
+| `GET /api/dashboard/sales-by-category` | [`api-sales-by-category.png`](evidencias/api-sales-by-category.png) |
+| `GET /api/dashboard/orders-status` | [`api-orders-status.png`](evidencias/api-orders-status.png) |
+| `GET /api/dashboard/top-products` | [`api-top-products.png`](evidencias/api-top-products.png) |
+
+![kpis](evidencias/api-kpis.png)
+![sales-trend](evidencias/api-sales-trend.png)
+![sales-by-category](evidencias/api-sales-by-category.png)
+![orders-status](evidencias/api-orders-status.png)
+![top-products](evidencias/api-top-products.png)
 
 ### Como rodar
 
@@ -46,7 +68,7 @@ O script [`tests/curl-dashboard.sh`](tests/curl-dashboard.sh) faz login como ger
 DASH_PASSWORD='<senha do gerente>' ./docs/dashboard/tests/curl-dashboard.sh http://localhost:8081
 ```
 
-> ⚠️ **Ainda não executado.** Nesta máquina, o MongoDB Atlas recusou a conexão TLS (`SSLException: Received fatal alert: internal_error`), o que no Atlas indica que o IP não está em *Network Access*. Sem banco, a aplicação não sobe, e por isso o script e o `-Ddashboard.it=true` ficam para quando o IP for liberado. A pasta `tests/evidencias/` só é gerada nessa execução.
+> ℹ️ A conexão com o Atlas foi corrigida (antes, o Atlas recusava o TLS por falta do IP em *Network Access*, e depois a resolução DNS SRV de `mongodb+srv://` falhou, resolvida com a URI `mongodb://`). A aplicação sobe e os 5 endpoints respondem, como mostram os prints em [Evidências](#evidências). O script `curl-dashboard.sh` em si ainda não foi executado, então a pasta `tests/evidencias/` não existe.
 
 ### Corpos de erro reais (MockMvc)
 
@@ -62,7 +84,7 @@ O front foi conferido com a API simulada (os mesmos números da massa de outubro
 - **Console:** sem erros. O layout funciona do celular (cartões empilhados) ao desktop.
 - **Script:** a sintaxe foi conferida com `node --check`.
 
-**Pendente com o app real:** prints de `/dashboard` com dados do Atlas para o relatório e o vídeo.
+**Pendente com o app real:** prints da tela `/dashboard` com dados do Atlas para o relatório e o vídeo (os prints acima são da API).
 
 ## Revisão de código
 
