@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<div th:fragment="content" id="dashboard">
+
+    <style>
+        #dashboard .kpi-value { font-size: 1.6rem; font-weight: 700; }
+        #dashboard .chart-box { position: relative; height: 300px; }
+        #dashboard .vazio { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+        #dashboard.carregando .painel { opacity: .5; transition: opacity .2s; }
+    </style>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="fw-bold mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Dashboard</h2>
+        <div class="d-flex align-items-center gap-2">
+            <small class="text-muted" id="atualizadoEm" aria-live="polite"></small>
+            <label for="autoRefresh" class="visually-hidden">Atualização automática</label>
+            <select id="autoRefresh" class="form-select form-select-sm" style="width: auto;">
+                <option value="0">Auto: desligado</option>
+                <option value="30">Auto: 30 s</option>
+                <option value="60">Auto: 1 min</option>
+                <option value="300">Auto: 5 min</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-primary" id="atualizar">
+                <span class="spinner-border spinner-border-sm d-none" id="spinner" role="status" aria-hidden="true"></span>
+                <i class="bi bi-arrow-clockwise" id="iconeAtualizar"></i> Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- RF05: filtros -->
+    <form class="card shadow-sm mb-3" id="filtros">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label for="f-from" class="form-label small mb-1">Data inicial</label>
+                <input type="date" id="f-from" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="f-to" class="form-label small mb-1">Data final</label>
+                <input type="date" id="f-to" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="f-status" class="form-label small mb-1">Status</label>
+                <select id="f-status" class="form-select form-select-sm">
+                    <option value="">Vendas (exceto cancelados)</option>
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="f-category" class="form-label small mb-1">Categoria</label>
+                <select id="f-category" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="f-paymentMethod" class="form-label small mb-1">Pagamento</label>
+                <select id="f-paymentMethod" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option th:each="f : ${formasPagamento}" th:value="${f}" th:text="${f}"></option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-dark flex-fill">Aplicar</button>
+                <button type="reset" class="btn btn-sm btn-outline-secondary flex-fill">Limpar</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="alert alert-danger d-none" id="erro" role="alert"></div>
+
+    <!-- RF01: indicadores gerais -->
+    <div class="row g-3 mb-3 painel">
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Faturamento</div>
+                <div class="kpi-value text-success" id="kpi-revenue">—</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Ticket médio</div>
+                <div class="kpi-value" id="kpi-ticket">—</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Pedidos</div>
+                <div class="kpi-value" id="kpi-orders">—</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="text-muted small">Período</div>
+                <div class="fw-semibold mt-2" id="kpi-period">—</div>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- RF02: gráficos -->
+    <div class="row g-3 mb-3 painel">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">Evolução das vendas</h6>
+                    <label for="granularity" class="visually-hidden">Agrupar por</label>
+                    <select id="granularity" class="form-select form-select-sm" style="width: auto;">
+                        <option value="DAY">Por dia</option>
+                        <option value="WEEK">Por semana</option>
+                        <option value="MONTH">Por mês</option>
+                    </select>
+                </div>
+                <div class="chart-box">
+                    <canvas id="chartTrend" aria-label="Faturamento e pedidos por período" role="img"></canvas>
+                    <div class="vazio text-muted d-none" id="vazioTrend">Nenhuma venda no período.</div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <h6 class="fw-bold mb-2">Vendas por categoria</h6>
+                <div class="chart-box">
+                    <canvas id="chartCategory" aria-label="Faturamento por categoria" role="img"></canvas>
+                    <div class="vazio text-muted d-none" id="vazioCategory">Nenhuma venda no período.</div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4 painel">
+        <!-- RF03: situação dos pedidos -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <h6 class="fw-bold mb-3">Situação dos pedidos</h6>
+                <div id="statusList"></div>
+                <div class="text-muted text-center py-4 d-none" id="vazioStatus">Nenhum pedido no período.</div>
+            </div></div>
+        </div>
+        <!-- RF04: produtos mais vendidos -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100"><div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold mb-0">Produtos mais vendidos</h6>
+                    <label for="sort" class="visually-hidden">Ordenar por</label>
+                    <select id="sort" class="form-select form-select-sm" style="width: auto;">
+                        <option value="QUANTITY">Por quantidade</option>
+                        <option value="REVENUE">Por receita</option>
+                    </select>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th>#</th><th>Produto</th><th>Categoria</th><th class="text-end">Qtd.</th><th class="text-end">Receita</th></tr></thead>
+                        <tbody id="topProducts"></tbody>
+                    </table>
+                </div>
+                <div class="text-muted text-center py-4 d-none" id="vazioTop">Nenhum produto vendido no período.</div>
+            </div></div>
+        </div>
+    </div>
+
+    <script th:src="@{/plugins/chart.js/Chart.min.js}"></script>
+    <script>
+        (() => {
+            const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+            const INT = new Intl.NumberFormat('pt-BR');
+            const STATUS = {
+                RECEBIDO: ['Recebido (pendente)', 'bg-secondary'], EM_PREPARACAO: ['Em preparação', 'bg-warning'],
+                PRONTO: ['Pronto', 'bg-info'], SAIU_PARA_ENTREGA: ['Saiu para entrega', 'bg-primary'],
+                RETIRADO: ['Retirado', 'bg-primary'], FINALIZADO: ['Finalizado (entregue)', 'bg-success'],
+                CANCELADO: ['Cancelado', 'bg-danger']
+            };
+            const FILTROS = ['from', 'to', 'status', 'category', 'paymentMethod'];
+            const $ = id => document.getElementById(id);
+            const charts = {};
+            let timer = null;
+
+            // "2026-10-05" -> "05/10/2026" sem passar por Date (evita deslocamento de fuso)
+            const dataBR = iso => iso.split('-').reverse().join('/');
+            const rotulo = (iso, g) => g === 'MONTH' ? dataBR(iso).slice(3) : (g === 'WEEK' ? 'sem. ' : '') + dataBR(iso).slice(0, 5);
+
+            function query(extra) {
+                const p = new URLSearchParams();
+                FILTROS.forEach(k => { const v = $('f-' + k).value; if (v) p.set(k, v); });
+                Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v));
+                return p.toString();
+            }
+
+            // RF06: o front consome somente a API; erros chegam como ProblemDetail
+            async function api(path, extra) {
+                const resposta = await fetch(`/api/dashboard/${path}?${query(extra)}`, { headers: { Accept: 'application/json' } });
+                if (resposta.status === 401) {
+                    location.href = '/login?expired';
+                    throw new Error('Sessão expirada.');
+                }
+                if (!resposta.ok) {
+                    const problema = await resposta.json().catch(() => ({}));
+                    const erros = (problema.errors || []).map(e => `${e.field}: ${e.message}`).join('; ');
+                    throw new Error([problema.detail, erros].filter(Boolean).join(' — ') || `Erro HTTP ${resposta.status}`);
+                }
+                return resposta.json();
+            }
+
+            function grafico(id, config) {
+                if (charts[id]) charts[id].destroy();
+                charts[id] = new Chart($(id), config);
+            }
+
+            function vazio(id, estaVazio, canvasId) {
+                $(id).classList.toggle('d-none', !estaVazio);
+                if (canvasId) $(canvasId).classList.toggle('invisible', estaVazio);
+            }
+
+            function renderKpis(k) {
+                $('kpi-revenue').textContent = BRL.format(k.revenue);
+                $('kpi-ticket').textContent = BRL.format(k.averageTicket);
+                $('kpi-orders').textContent = INT.format(k.orders);
+                $('kpi-period').textContent = `${dataBR(k.from)} a ${dataBR(k.to)}`;
+            }
+
+            function renderTrend(pontos, g) {
+                vazio('vazioTrend', pontos.every(p => p.orders === 0), 'chartTrend');
+                grafico('chartTrend', {
+                    type: 'bar',
+                    data: {
+                        labels: pontos.map(p => rotulo(p.period, g)),
+                        datasets: [
+                            { type: 'line', label: 'Faturamento', data: pontos.map(p => p.revenue), yAxisID: 'receita',
+                              borderColor: '#198754', backgroundColor: 'rgba(25,135,84,.12)', lineTension: .25, pointRadius: 2 },
+                            { label: 'Pedidos', data: pontos.map(p => p.orders), yAxisID: 'pedidos', backgroundColor: 'rgba(108,117,125,.35)' }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        tooltips: { mode: 'index', intersect: false, callbacks: {
+                            label: (item, data) => `${data.datasets[item.datasetIndex].label}: ` +
+                                (item.datasetIndex === 0 ? BRL.format(item.yLabel) : INT.format(item.yLabel)) } },
+                        scales: { yAxes: [
+                            { id: 'receita', position: 'left', ticks: { beginAtZero: true, callback: v => BRL.format(v) } },
+                            { id: 'pedidos', position: 'right', gridLines: { drawOnChartArea: false }, ticks: { beginAtZero: true, precision: 0 } }
+                        ] }
+                    }
+                });
+            }
+
+            function renderCategorias(categorias) {
+                vazio('vazioCategory', categorias.length === 0, 'chartCategory');
+                grafico('chartCategory', {
+                    type: 'horizontalBar',
+                    data: {
+                        labels: categorias.map(c => c.category),
+                        datasets: [{ label: 'Faturamento', data: categorias.map(c => c.revenue), backgroundColor: '#0d6efd' }]
+                    },
+                    options: {
+                        maintainAspectRatio: false, legend: { display: false },
+                        tooltips: { callbacks: { label: item =>
+                            `${BRL.format(item.xLabel)} · ${INT.format(categorias[item.index].quantity)} un.` } },
+                        scales: { xAxes: [{ ticks: { beginAtZero: true, callback: v => BRL.format(v) } }] }
+                    }
+                });
+            }
+
+            function renderStatus(contagens) {
+                const total = contagens.reduce((s, c) => s + c.count, 0);
+                const lista = $('statusList');
+                lista.replaceChildren();
+                vazio('vazioStatus', total === 0);
+                if (total === 0) return;
+                contagens.forEach(c => {
+                    const [nome, cor] = STATUS[c.status] || [c.status, 'bg-secondary'];
+                    const linha = document.createElement('div');
+                    linha.className = 'mb-2';
+                    linha.innerHTML = '<div class="d-flex justify-content-between small"><span></span><strong></strong></div>' +
+                        '<div class="progress" style="height: 8px;"><div class="progress-bar"></div></div>';
+                    linha.querySelector('span').textContent = nome;
+                    linha.querySelector('strong').textContent = INT.format(c.count);
+                    const barra = linha.querySelector('.progress-bar');
+                    barra.classList.add(cor);
+                    barra.style.width = `${(100 * c.count / total).toFixed(1)}%`;
+                    lista.appendChild(linha);
+                });
+            }
+
+            function renderTop(produtos) {
+                const corpo = $('topProducts');
+                corpo.replaceChildren();
+                vazio('vazioTop', produtos.length === 0);
+                produtos.forEach((p, i) => {
+                    const tr = corpo.insertRow();
+                    [i + 1, p.name, p.category, INT.format(p.quantity), BRL.format(p.revenue)].forEach((valor, coluna) => {
+                        const td = tr.insertCell();
+                        td.textContent = valor;           // textContent: nome vem do banco, nunca vira HTML
+                        if (coluna >= 3) td.className = 'text-end';
+                    });
+                });
+            }
+
+            function carregando(sim) {
+                $('dashboard').classList.toggle('carregando', sim);
+                $('atualizar').disabled = sim;
+                $('spinner').classList.toggle('d-none', !sim);
+                $('iconeAtualizar').classList.toggle('d-none', sim);
+            }
+
+            // RF07: refresh com loading, erro e vazio
+            async function carregar() {
+                carregando(true);
+                $('erro').classList.add('d-none');
+                const g = $('granularity').value;
+                try {
+                    const [kpis, serie, categorias, status, top] = await Promise.all([
+                        api('kpis'), api('sales-trend', { granularity: g }), api('sales-by-category'),
+                        api('orders-status'), api('top-products', { sort: $('sort').value, limit: 10 })]);
+                    renderKpis(kpis);
+                    renderTrend(serie, g);
+                    renderCategorias(categorias);
+                    renderStatus(status);
+                    renderTop(top);
+                    $('atualizadoEm').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+                } catch (e) {
+                    $('erro').textContent = 'Não foi possível carregar o dashboard: ' + e.message;
+                    $('erro').classList.remove('d-none');
+                } finally {
+                    carregando(false);
+                }
+            }
+
+            // Categorias vem do cadastro de produtos (GET /api/produtos); sem ele, so "Todas"
+            fetch('/api/produtos', { headers: { Accept: 'application/json' } })
+                .then(r => r.ok ? r.json() : [])
+                .then(produtos => [...new Set(produtos.map(p => (p.tipo || '').trim()).filter(Boolean))].sort()
+                    .forEach(tipo => $('f-category').add(new Option(tipo, tipo))))
+                .catch(() => {});
+
+            $('filtros').addEventListener('submit', e => { e.preventDefault(); carregar(); });
+            $('filtros').addEventListener('reset', () => setTimeout(carregar));
+            $('atualizar').addEventListener('click', carregar);
+            $('granularity').addEventListener('change', carregar);
+            $('sort').addEventListener('change', carregar);
+            $('autoRefresh').addEventListener('change', e => {
+                clearInterval(timer);
+                const segundos = Number(e.target.value);
+                if (segundos > 0) timer = setInterval(() => { if (!document.hidden) carregar(); }, segundos * 1000);
+            });
+
+            carregar();
+        })();
+    </script>
+</div>
+
+</body>
+</html>
